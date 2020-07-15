@@ -23,7 +23,7 @@ public class ZipUtil {
    * @return path to zip file
    */
   public String createZipFileRecursively(String directoryPath, String pathToZipFile) {
-    try (FileOutputStream fos = new FileOutputStream(pathToZipFile + ".zip");
+    try (FileOutputStream fos = new FileOutputStream(pathToZipFile);
         ZipOutputStream zos = new ZipOutputStream(fos)) {
 
       Path sourcePath = Paths.get(directoryPath);

@@ -4,12 +4,13 @@ import org.palladiosimulator.experimentautomation.kubernetesclient.exception.Exp
 
 public interface IExperimentHandler {
 
+
 	/**
 	 * Process query to send experiment data to client
 	 * 
 	 * @param pathToExperimentFile
 	 * @throws ExperimentException
 	 */
-	void sendExperimentData(String pathToExperimentFile) throws ExperimentException;
+	void sendExperimentData(String pathToExperimentFile, String kubernetesClientIp) throws ExperimentException;
 
 }

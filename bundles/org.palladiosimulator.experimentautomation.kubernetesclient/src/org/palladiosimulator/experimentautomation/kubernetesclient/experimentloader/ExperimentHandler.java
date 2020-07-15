@@ -3,6 +3,7 @@ package org.palladiosimulator.experimentautomation.kubernetesclient.experimentlo
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,6 +20,8 @@ import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
+import org.palladiosimulator.experimentautomation.kubernetesclient.rest.ExperimentRestClient;
+import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.KubernetesClientPathFactory;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.FileUtil;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.ZipUtil;
 
@@ -30,9 +33,15 @@ import org.palladiosimulator.experimentautomation.kubernetesclient.util.ZipUtil;
  */
 public class ExperimentHandler implements IExperimentHandler {
 
-	private static String pathToResourceFolder = "resources/";
-	private static String pathToExperimentFolder = "resources/experimentFiles/";
-	private static String pathToZipFile = "resources/experimentData";
+	ExperimentRestClient restClient;
+
+	public ExperimentHandler() {
+		restClient = new ExperimentRestClient();
+	}
+
+	private final static String pathToResourceFolder = "resources/";
+	private final static String pathToExperimentFolder = "resources/experimentFiles/";
+	private final static String pathToZipFile = "resources/experimentData.zip";
 
 	/**
 	 * Process query to send experiment data to client
@@ -41,21 +50,54 @@ public class ExperimentHandler implements IExperimentHandler {
 	 * @throws ExperimentException
 	 */
 	@Override
-	public void sendExperimentData(String pathToExperimentFile) throws ExperimentException {
+	public void sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException {
 
+		java.net.URI kubernetesClientURI = createURIFromHost(clientHost);
 		URI uriToExperimentFile = createURIFromPath(pathToExperimentFile);
 		ResourceSet resSet = resolveResourcesFromExperimentFile(uriToExperimentFile);
 		changeURIsInResourceSet(resSet);
 		saveResources(resSet);
-		zipResources();
+		byte[] simulationData = zipResourcesAsByteStream();
+		startSimulation(simulationData, kubernetesClientURI);
 
 	}
 
-	private void zipResources() throws ExperimentException {
+	private java.net.URI createURIFromHost(String kubernetesClientHost) throws ExperimentException {
+		if(!checkClientHost(kubernetesClientHost)) {
+			throw new ExperimentException("Please enter a valid client host");
+		}
+		try {
+			return KubernetesClientPathFactory.getInstance().getClientURI(kubernetesClientHost);
+		} catch (URISyntaxException e) {
+			throw new ExperimentException("Invalid Client Host");
+		}
+	}
+	
+	private boolean checkClientHost(String kubernetesClientHost) throws ExperimentException {
+		
+		return kubernetesClientHost!=null && !kubernetesClientHost.isBlank();
+		
+	}
+
+	private void startSimulation( byte[] simulationData, java.net.URI clientURI) throws ExperimentException {
+		
+		if(!restClient.startSimulation(simulationData,clientURI)) {
+			throw new ExperimentException("Error while executing rest call");
+		}
+	}
+
+	private byte[] zipResourcesAsByteStream() throws ExperimentException {
 		ZipUtil zipUtil = new ZipUtil();
 		if (zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {
 			throw new ExperimentException("Error while zipping experiment data.");
 		}
+		
+		byte[] content = FileUtil.loadFileAsByteStream(pathToZipFile);
+		if(content ==null) {
+			throw new ExperimentException("Error while loading zipped experiment data");
+		}
+		
+		return content;
 
 	}
 
@@ -125,7 +167,7 @@ public class ExperimentHandler implements IExperimentHandler {
 	 * Load experiment file and resolve all resources into a resource set
 	 */
 	private ResourceSet resolveResourcesFromExperimentFile(URI uriToExperimentFile) throws ExperimentException {
-		
+
 		Resource.Factory.Registry reg = Resource.Factory.Registry.INSTANCE;
 		Map<String, Object> m = reg.getExtensionToFactoryMap();
 		m.put("experiments", new XMIResourceFactoryImpl());

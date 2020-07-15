@@ -54,7 +54,7 @@ public class KubernetesView extends ViewPart {
 	// private TableViewer viewer;
 	private Action action1;
 	private Action action2;
-	private Text ipAdressTextField;
+	private Text hostTextField;
 	private Text pathToExperimentFileTextField;
 	private Composite parent;
 	private IExperimentHandler experimentHandler;
@@ -117,9 +117,10 @@ public class KubernetesView extends ViewPart {
 				switch (event.type) {
 				case SWT.Selection:
 					String pathToExperimentFile = pathToExperimentFileTextField.getText();
+					String kubernetesClientHost = hostTextField.getText();
 
 					try {
-						experimentHandler.sendExperimentData(pathToExperimentFile);
+						experimentHandler.sendExperimentData(pathToExperimentFile, kubernetesClientHost);
 					} catch (ExperimentException e) {
 						showMessage(e.getMessage());
 					}
@@ -162,12 +163,13 @@ public class KubernetesView extends ViewPart {
 		});
 	}
 
+	// TODO suggestions
 	private void makeIPAdressLabel() {
-		new Label(parent, SWT.NULL).setText("Kubernetes Client IP:");
-		ipAdressTextField = new Text(parent, SWT.SINGLE | SWT.BORDER);
+		new Label(parent, SWT.NULL).setText("Kubernetes Client Host:");
+		hostTextField = new Text(parent, SWT.SINGLE | SWT.BORDER);
 		GridData gridData = new GridData(GridData.HORIZONTAL_ALIGN_FILL);
 		gridData.horizontalSpan = 3;
-		ipAdressTextField.setLayoutData(gridData);
+		hostTextField.setLayoutData(gridData);
 	}
 
 	private void hookContextMenu() {

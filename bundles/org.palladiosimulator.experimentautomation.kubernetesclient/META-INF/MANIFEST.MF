@@ -7,7 +7,12 @@ Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.ui,
  org.eclipse.emf.ecore;bundle-version="2.22.0",
  org.eclipse.emf.ecore.xmi;bundle-version="2.16.0",
- org.apache.commons.io;bundle-version="2.6.0"
+ org.apache.commons.io;bundle-version="2.6.0",
+ org.apache.httpcomponents.httpclient;bundle-version="4.5.10",
+ org.apache.httpcomponents.httpcore;bundle-version="4.4.12"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
-Import-Package: javax.inject
+Import-Package: com.fasterxml.jackson.core,
+ com.fasterxml.jackson.core.json,
+ javax.inject,
+ org.apache.http
 Automatic-Module-Name: org.palladiosimulator.experimentautomation.kubernetesclient
