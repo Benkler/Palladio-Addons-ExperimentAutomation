@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.emf.common.util.URI;
@@ -18,6 +19,8 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
+import org.eclipse.emf.ecore.xmi.impl.XMLResourceFactoryImpl;
+import org.eclipse.emf.ecore.xmi.impl.XMLResourceImpl;
 import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.rest.ExperimentRestClient;
@@ -63,7 +66,7 @@ public class ExperimentHandler implements IExperimentHandler {
 	}
 
 	private java.net.URI createURIFromHost(String kubernetesClientHost) throws ExperimentException {
-		if(!checkClientHost(kubernetesClientHost)) {
+		if (!checkClientHost(kubernetesClientHost)) {
 			throw new ExperimentException("Please enter a valid client host");
 		}
 		try {
@@ -72,16 +75,16 @@ public class ExperimentHandler implements IExperimentHandler {
 			throw new ExperimentException("Invalid Client Host");
 		}
 	}
-	
+
 	private boolean checkClientHost(String kubernetesClientHost) throws ExperimentException {
-		
-		return kubernetesClientHost!=null && !kubernetesClientHost.isBlank();
-		
+
+		return kubernetesClientHost != null && !kubernetesClientHost.isBlank();
+
 	}
 
-	private void startSimulation( byte[] simulationData, java.net.URI clientURI) throws ExperimentException {
-		
-		if(!restClient.startSimulation(simulationData,clientURI)) {
+	private void startSimulation(byte[] simulationData, java.net.URI clientURI) throws ExperimentException {
+
+		if (!restClient.startSimulation(simulationData, clientURI)) {
 			throw new ExperimentException("Error while executing rest call");
 		}
 	}
@@ -91,12 +94,12 @@ public class ExperimentHandler implements IExperimentHandler {
 		if (zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {
 			throw new ExperimentException("Error while zipping experiment data.");
 		}
-		
+
 		byte[] content = FileUtil.loadFileAsByteStream(pathToZipFile);
-		if(content ==null) {
+		if (content == null) {
 			throw new ExperimentException("Error while loading zipped experiment data");
 		}
-		
+
 		return content;
 
 	}
@@ -170,7 +173,8 @@ public class ExperimentHandler implements IExperimentHandler {
 
 		Resource.Factory.Registry reg = Resource.Factory.Registry.INSTANCE;
 		Map<String, Object> m = reg.getExtensionToFactoryMap();
-		m.put("experiments", new XMIResourceFactoryImpl());
+		// TODO hier war XMIResourceFactoryImpl
+		m.put("experiments", new XMLResourceFactoryImpl());
 
 		ResourceSet resSet = new ResourceSetImpl();
 
@@ -182,7 +186,19 @@ public class ExperimentHandler implements IExperimentHandler {
 			throw new ExperimentException("Could not find resource with URI: " + uriToExperimentFile);
 		}
 
-		EcoreUtil.resolveAll(resource);
+		// Resource root resource (experiment file)
+		EcoreUtil.resolveAll(resSet);
+
+		//TODO is this the correct approach?
+		// Resolve all resources until no more resources will be added to set
+		int amountOfResourcesInResourceSetBeforeVisiting;
+		int amountOfResourcesInResourceSetAfterVisiting;
+		do {
+			amountOfResourcesInResourceSetBeforeVisiting = resSet.getResources().size();
+			EcoreUtil.resolveAll(resSet);
+			amountOfResourcesInResourceSetAfterVisiting = resSet.getResources().size();
+
+		} while (amountOfResourcesInResourceSetAfterVisiting > amountOfResourcesInResourceSetBeforeVisiting);
 
 		return resSet;
 	}
