@@ -8,6 +8,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.part.*;
+import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.experimentloader.ExperimentHandler;
 import org.eclipse.jface.viewers.*;
@@ -53,10 +54,10 @@ public class KubernetesView extends ViewPart {
 	// private TableViewer viewer;
 	private Action action1;
 	private Action action2;
-	Text ipAdressTextField;
-	Text pathToExperimentFileTextField;
+	private Text ipAdressTextField;
+	private Text pathToExperimentFileTextField;
 	private Composite parent;
-	private ExperimentHandler experimentLoader;
+	private IExperimentHandler experimentHandler;
 
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
 		@Override
@@ -78,7 +79,7 @@ public class KubernetesView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent) {
 		this.parent = parent;
-		experimentLoader = new ExperimentHandler();
+		experimentHandler = new ExperimentHandler();
 		// Create the help context id for the viewer's control
 		workbench.getHelpSystem().setHelp(parent, "org.palladiosimulator.experimentautomation.kubernetesclient.viewer");
 		// TODO hier war der viewer
@@ -118,7 +119,7 @@ public class KubernetesView extends ViewPart {
 					String pathToExperimentFile = pathToExperimentFileTextField.getText();
 
 					try {
-						experimentLoader.sendExperimentData(pathToExperimentFile);
+						experimentHandler.sendExperimentData(pathToExperimentFile);
 					} catch (ExperimentException e) {
 						showMessage(e.getMessage());
 					}

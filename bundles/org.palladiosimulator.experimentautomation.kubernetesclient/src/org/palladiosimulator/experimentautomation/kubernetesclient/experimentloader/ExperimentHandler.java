@@ -17,7 +17,9 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
+import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
+import org.palladiosimulator.experimentautomation.kubernetesclient.util.FileUtil;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.ZipUtil;
 
 /**
@@ -26,12 +28,11 @@ import org.palladiosimulator.experimentautomation.kubernetesclient.util.ZipUtil;
  * @author niko
  *
  */
-public class ExperimentHandler {
+public class ExperimentHandler implements IExperimentHandler {
 
-	
-	private static String pathToResourceFolder ="resources/";
-	private static String pathToExperimentFolder ="resources/experimentFiles/";
-	private static String pathToZipFile ="resources/experimentData";
+	private static String pathToResourceFolder = "resources/";
+	private static String pathToExperimentFolder = "resources/experimentFiles/";
+	private static String pathToZipFile = "resources/experimentData";
 
 	/**
 	 * Process query to send experiment data to client
@@ -39,6 +40,7 @@ public class ExperimentHandler {
 	 * @param pathToExperimentFile
 	 * @throws ExperimentException
 	 */
+	@Override
 	public void sendExperimentData(String pathToExperimentFile) throws ExperimentException {
 
 		URI uriToExperimentFile = createURIFromPath(pathToExperimentFile);
@@ -51,40 +53,21 @@ public class ExperimentHandler {
 
 	private void zipResources() throws ExperimentException {
 		ZipUtil zipUtil = new ZipUtil();
-		if(zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {
+		if (zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {
 			throw new ExperimentException("Error while zipping experiment data.");
 		}
-		
-		
-	}
 
-	private void deleteDirRecursively(Path pathToDirectory) throws IOException {
-		if(Files.exists(pathToDirectory)) {
-			System.out.println("File exists");
-			Files.walk(pathToDirectory).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
-		}
-		
-	}
-
-	private void cleanUpResourceDirectory() throws ExperimentException {
-
-		try {
-			deleteDirRecursively(Paths.get(pathToResourceFolder));
-		} catch (IOException e1) {
-			throw new ExperimentException("Error while saving resources. Clean-Up failed!");
-		}
 	}
 
 	private void createResourceAndExperimentDirectory() throws ExperimentException {
-		try {
-			//Recursively creates resource and experiment folder (within resource folder)
-			Files.createDirectories(Paths.get(pathToExperimentFolder));
-		} catch (IOException e1) {
-			System.out.println(e1.getMessage());
+		if (!FileUtil.createDirectoryRecursively(pathToExperimentFolder)) {
 			throw new ExperimentException("Error while saving resources. Could not create outputdirectory");
 		}
 	}
 
+	/*
+	 * Save single Resource under its URI
+	 */
 	private void saveResource(Resource resource) throws ExperimentException {
 		String path = resource.getURI().path();
 		File resourceFile = new File(path);
@@ -94,22 +77,21 @@ public class ExperimentHandler {
 			resourceFile.createNewFile();
 			resource.save(Collections.EMPTY_MAP);
 		} catch (IOException e) {
-			System.out.println(e.getMessage());
 			throw new ExperimentException("Error while saving resources");
 		}
 	}
 
 	/*
 	 * Save each resource in given resource set to temporary folder.
+	 * 
 	 */
 	private void saveResources(ResourceSet resSet) throws ExperimentException {
 
-		cleanUpResourceDirectory();
+		FileUtil.deleteDirectory(pathToResourceFolder);
 		createResourceAndExperimentDirectory();
 
 		for (Resource res : resSet.getResources()) {
 			saveResource(res);
-
 		}
 	}
 
@@ -140,17 +122,16 @@ public class ExperimentHandler {
 	}
 
 	/*
-	 * Load experiment file and resolve all ressources into a resource set
+	 * Load experiment file and resolve all resources into a resource set
 	 */
 	private ResourceSet resolveResourcesFromExperimentFile(URI uriToExperimentFile) throws ExperimentException {
-		// Register the XMI resource factory for the .website extension
+		
 		Resource.Factory.Registry reg = Resource.Factory.Registry.INSTANCE;
 		Map<String, Object> m = reg.getExtensionToFactoryMap();
 		m.put("experiments", new XMIResourceFactoryImpl());
 
 		ResourceSet resSet = new ResourceSetImpl();
 
-		// TODO Handle Exception
 		Resource resource;
 		try {
 			resource = resSet.getResource(uriToExperimentFile, true);
