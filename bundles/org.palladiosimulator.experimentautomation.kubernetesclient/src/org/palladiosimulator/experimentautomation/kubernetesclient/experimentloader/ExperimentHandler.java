@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.emf.common.util.URI;
@@ -22,9 +23,11 @@ import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMLResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMLResourceImpl;
 import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
+import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ClientNotAvailableException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.rest.ExperimentRestClient;
 import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.KubernetesClientPathFactory;
+import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.FileUtil;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.ZipUtil;
 
@@ -46,45 +49,43 @@ public class ExperimentHandler implements IExperimentHandler {
 	private final static String pathToExperimentFolder = "resources/experimentFiles/";
 	private final static String pathToZipFile = "resources/experimentData.zip";
 
+	
+	/**
+	 * Retrieve all existing Simulations
+	 * @param clientHost
+	 * @return
+	 * @throws ClientNotAvailableException
+	 * @throws ExperimentException
+	 */
+	@Override
+	public List<SimulationVO> getExistingSimulation(String clientHost) throws ClientNotAvailableException, ExperimentException{
+		return restClient.getAvailableSimulations(clientHost);
+	}
+	
 	/**
 	 * Process query to send experiment data to client
 	 * 
 	 * @param pathToExperimentFile
 	 * @throws ExperimentException
+	 * @throws ClientNotAvailableException 
 	 */
 	@Override
-	public void sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException {
+	public void sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException, ClientNotAvailableException {
 
-		java.net.URI kubernetesClientURI = createURIFromHost(clientHost);
 		URI uriToExperimentFile = createURIFromPath(pathToExperimentFile);
 		ResourceSet resSet = resolveResourcesFromExperimentFile(uriToExperimentFile);
 		changeURIsInResourceSet(resSet);
 		saveResources(resSet);
 		byte[] simulationData = zipResourcesAsByteStream();
-		startSimulation(simulationData, kubernetesClientURI);
+		startSimulation(simulationData, clientHost);
 
 	}
+	
+	
 
-	private java.net.URI createURIFromHost(String kubernetesClientHost) throws ExperimentException {
-		if (!checkClientHost(kubernetesClientHost)) {
-			throw new ExperimentException("Please enter a valid client host");
-		}
-		try {
-			return KubernetesClientPathFactory.getInstance().getClientURI(kubernetesClientHost);
-		} catch (URISyntaxException e) {
-			throw new ExperimentException("Invalid Client Host");
-		}
-	}
+	private void startSimulation(byte[] simulationData, String clientHost) throws ExperimentException, ClientNotAvailableException {
 
-	private boolean checkClientHost(String kubernetesClientHost) throws ExperimentException {
-
-		return kubernetesClientHost != null && !kubernetesClientHost.isBlank();
-
-	}
-
-	private void startSimulation(byte[] simulationData, java.net.URI clientURI) throws ExperimentException {
-
-		if (!restClient.startSimulation(simulationData, clientURI)) {
+		if (!restClient.startSimulation(simulationData, clientHost)) {
 			throw new ExperimentException("Error while executing rest call");
 		}
 	}
@@ -178,9 +179,9 @@ public class ExperimentHandler implements IExperimentHandler {
 
 		ResourceSet resSet = new ResourceSetImpl();
 
-		Resource resource;
+		
 		try {
-			resource = resSet.getResource(uriToExperimentFile, true);
+			resSet.getResource(uriToExperimentFile, true);
 		} catch (WrappedException e) {
 			System.out.println(e.getMessage());
 			throw new ExperimentException("Could not find resource with URI: " + uriToExperimentFile);

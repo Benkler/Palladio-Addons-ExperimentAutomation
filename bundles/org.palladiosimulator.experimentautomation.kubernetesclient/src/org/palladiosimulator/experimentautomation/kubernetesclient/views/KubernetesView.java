@@ -2,15 +2,16 @@ package org.palladiosimulator.experimentautomation.kubernetesclient.views;
 
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.part.*;
 import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
+import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ClientNotAvailableException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.experimentloader.ExperimentHandler;
+import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
 import org.eclipse.jface.viewers.*;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
@@ -19,10 +20,17 @@ import org.eclipse.jface.action.*;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.*;
 import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CCombo;
+import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -56,6 +64,7 @@ public class KubernetesView extends ViewPart {
 	private Action action2;
 	private Text hostTextField;
 	private Text pathToExperimentFileTextField;
+	private Table simulationsTable;
 	private Composite parent;
 	private IExperimentHandler experimentHandler;
 
@@ -95,6 +104,140 @@ public class KubernetesView extends ViewPart {
 		makeIPAdressLabel();
 		makeFileBrowser();
 		makeSendButton();
+		makeRefreshExperimentsButton();
+		makeExperimentsTable();
+	}
+
+	private void makeExperimentsTable() {
+
+		GridData data = new GridData(GridData.FILL_BOTH);
+		data.horizontalSpan = 4;
+		Table table = new Table(parent, SWT.BORDER | SWT.MULTI
+		        | SWT.FULL_SELECTION);
+		table.setLayoutData(data);
+		table.setLinesVisible(true);
+		table.setHeaderVisible(true);
+		
+		TableColumn simulationNamecolumn = new TableColumn(table, SWT.None);
+		simulationNamecolumn.setText("Simulation Name");
+		simulationNamecolumn.setWidth(350);
+		
+		TableColumn simulationStatusColumn = new TableColumn(table, SWT.None);
+		simulationStatusColumn.setText("Simulation Status");
+		simulationStatusColumn.setWidth(150);
+		
+		TableColumn simulationCreationTimeColumn = new TableColumn(table, SWT.None);
+		simulationCreationTimeColumn.setText("Creation Time");
+		simulationCreationTimeColumn.setWidth(180);
+		
+		
+		TableColumn simulationLogsColumn = new TableColumn(table, SWT.None);
+		simulationLogsColumn.setText("Get Logs");
+		simulationLogsColumn.setWidth(180);
+		
+		TableColumn simulationDownloadColumn = new TableColumn(table, SWT.None);
+		simulationDownloadColumn.setText("Simulation Status/Download Results");
+		simulationDownloadColumn.setWidth(200);
+		
+		
+		
+//
+//		for (int i = 0; i < titles.length; i++) {
+//			table.getColumn(i).pack();
+//		}
+		// table.setSize(table.computeSize(SWT.DEFAULT, 200));
+
+		this.simulationsTable = table;
+
+	}
+
+	private void refreshExperimentsTable(List<SimulationVO> simulations) {
+		Table table = this.simulationsTable;
+
+
+		// Clear all rows
+		table.removeAll();
+
+		
+		for (SimulationVO simulation : simulations) {
+			TableItem row = new TableItem(table, SWT.NONE);
+			
+			
+			TableEditor editor = new TableEditor(table);
+			editor = new TableEditor(table);
+			Text simulationNameText = new Text(table, SWT.NONE);
+			simulationNameText.setText(simulation.getSimulationName());
+			editor.grabHorizontal = true;
+			editor.setEditor(simulationNameText, row, 0);
+
+			editor = new TableEditor(table);
+			Text simulationStatusText = new Text(table, SWT.NONE);
+			simulationStatusText.setText(simulation.getSimulationStatus().getStatus());
+			editor.grabHorizontal = true;
+			editor.setEditor(simulationStatusText, row, 1);
+
+			editor = new TableEditor(table);
+			Text simulationTimestampText = new Text(table, SWT.NONE);
+			simulationTimestampText.setText(simulation.getCreationTimeStamp());
+			editor.grabHorizontal = true;
+			editor.setEditor(simulationTimestampText, row, 2);
+			
+			editor = new TableEditor(table);
+			Button downloadLogButton = new Button(table, SWT.PUSH);
+			downloadLogButton.setText("Download Log");
+			editor.grabHorizontal = true;
+			editor.setEditor(downloadLogButton, row, 3);
+			
+			editor = new TableEditor(table);
+			Button statusButton = new Button(table, SWT.PUSH);
+			statusButton.setText("Status");
+			editor.grabHorizontal = true;
+			editor.setEditor(statusButton, row, 4);
+
+
+
+		}
+
+		
+	//table.setSize(table.computeSize(SWT.DEFAULT, 400));
+//		for (int i = 0; i < table.getColumnCount(); i++) {
+//			table.getColumn(i).pack();
+//		}
+
+	}
+
+	private void makeRefreshExperimentsButton() {
+		new Label(parent, SWT.NULL).setText("Get current simulations:");
+
+		// Clicking the button will allow the user
+		// to select a directory
+		Button button = new Button(parent, SWT.PUSH);
+		button.setText("Refresh Experiments");
+
+		GridData data = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
+		data.horizontalSpan = 3;
+		button.setLayoutData(data);
+		button.addListener(SWT.Selection, new Listener() {
+
+			@Override
+			public void handleEvent(Event event) {
+
+				switch (event.type) {
+				case SWT.Selection:
+					String kubernetesClientHost = hostTextField.getText();
+
+					try {
+						refreshExperimentsTable(experimentHandler.getExistingSimulation(kubernetesClientHost));
+
+					} catch (ExperimentException | ClientNotAvailableException e) {
+						showMessage(e.getMessage());
+					}
+					break;
+				}
+
+			}
+		});
+
 	}
 
 	private void makeSendButton() {
@@ -106,8 +249,8 @@ public class KubernetesView extends ViewPart {
 		Button button = new Button(parent, SWT.PUSH);
 		button.setText("Send experiment data");
 
-		GridData data = new GridData(GridData.FILL_HORIZONTAL);
-		data.horizontalSpan = 1;
+		GridData data = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING);
+		data.horizontalSpan = 3;
 		button.setLayoutData(data);
 		button.addListener(SWT.Selection, new Listener() {
 
@@ -121,7 +264,7 @@ public class KubernetesView extends ViewPart {
 
 					try {
 						experimentHandler.sendExperimentData(pathToExperimentFile, kubernetesClientHost);
-					} catch (ExperimentException e) {
+					} catch (ExperimentException | ClientNotAvailableException e) {
 						showMessage(e.getMessage());
 					}
 					break;
