@@ -70,26 +70,18 @@ public class ExperimentHandler implements IExperimentHandler {
 	 * @throws ClientNotAvailableException 
 	 */
 	@Override
-	public void sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException, ClientNotAvailableException {
+	public SimulationVO sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException, ClientNotAvailableException {
 
 		URI uriToExperimentFile = createURIFromPath(pathToExperimentFile);
 		ResourceSet resSet = resolveResourcesFromExperimentFile(uriToExperimentFile);
 		changeURIsInResourceSet(resSet);
 		saveResources(resSet);
 		byte[] simulationData = zipResourcesAsByteStream();
-		startSimulation(simulationData, clientHost);
+		return restClient.startSimulation(simulationData, clientHost);
 
 	}
 	
 	
-
-	private void startSimulation(byte[] simulationData, String clientHost) throws ExperimentException, ClientNotAvailableException {
-
-		if (!restClient.startSimulation(simulationData, clientHost)) {
-			throw new ExperimentException("Error while executing rest call");
-		}
-	}
-
 	private byte[] zipResourcesAsByteStream() throws ExperimentException {
 		ZipUtil zipUtil = new ZipUtil();
 		if (zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {

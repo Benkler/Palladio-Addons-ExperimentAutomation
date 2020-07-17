@@ -13,10 +13,11 @@ public interface IExperimentHandler {
 	 * Process query to send experiment data to client
 	 * 
 	 * @param pathToExperimentFile
+	 * @return 
 	 * @throws ExperimentException
 	 * @throws ClientNotAvailableException 
 	 */
-	void sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException, ClientNotAvailableException;
+	SimulationVO sendExperimentData(String pathToExperimentFile, String clientHost) throws ExperimentException, ClientNotAvailableException;
 
 	/**
 	 * Retrieve all existing Simulations

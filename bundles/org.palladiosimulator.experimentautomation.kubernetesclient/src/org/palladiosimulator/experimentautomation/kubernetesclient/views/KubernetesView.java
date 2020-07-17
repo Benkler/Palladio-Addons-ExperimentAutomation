@@ -30,6 +30,8 @@ import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -59,9 +61,6 @@ public class KubernetesView extends ViewPart {
 	@Inject
 	IWorkbench workbench;
 
-	// private TableViewer viewer;
-	private Action action1;
-	private Action action2;
 	private Text hostTextField;
 	private Text pathToExperimentFileTextField;
 	private Table simulationsTable;
@@ -91,8 +90,6 @@ public class KubernetesView extends ViewPart {
 		experimentHandler = new ExperimentHandler();
 		// Create the help context id for the viewer's control
 		workbench.getHelpSystem().setHelp(parent, "org.palladiosimulator.experimentautomation.kubernetesclient.viewer");
-		// TODO hier war der viewer
-		// getSite().setSelectionProvider(viewer);
 		makeActions();
 		hookContextMenu();
 		contributeToActionBars();
@@ -110,7 +107,7 @@ public class KubernetesView extends ViewPart {
 
 	private void makeExperimentsTable() {
 
-		GridData data = new GridData(GridData.FILL_BOTH);
+		GridData data = new GridData(GridData.FILL_VERTICAL);
 		data.horizontalSpan = 4;
 		Table table = new Table(parent, SWT.BORDER | SWT.MULTI
 		        | SWT.FULL_SELECTION);
@@ -121,23 +118,27 @@ public class KubernetesView extends ViewPart {
 		TableColumn simulationNamecolumn = new TableColumn(table, SWT.None);
 		simulationNamecolumn.setText("Simulation Name");
 		simulationNamecolumn.setWidth(350);
+		simulationNamecolumn.setAlignment(SWT.CENTER);
 		
 		TableColumn simulationStatusColumn = new TableColumn(table, SWT.None);
 		simulationStatusColumn.setText("Simulation Status");
 		simulationStatusColumn.setWidth(150);
+		simulationStatusColumn.setAlignment(SWT.CENTER);
 		
 		TableColumn simulationCreationTimeColumn = new TableColumn(table, SWT.None);
 		simulationCreationTimeColumn.setText("Creation Time");
 		simulationCreationTimeColumn.setWidth(180);
-		
+		simulationCreationTimeColumn.setAlignment(SWT.CENTER);
 		
 		TableColumn simulationLogsColumn = new TableColumn(table, SWT.None);
 		simulationLogsColumn.setText("Get Logs");
-		simulationLogsColumn.setWidth(180);
+		simulationLogsColumn.setWidth(160);
+		simulationLogsColumn.setAlignment(SWT.CENTER);
 		
 		TableColumn simulationDownloadColumn = new TableColumn(table, SWT.None);
-		simulationDownloadColumn.setText("Simulation Status/Download Results");
+		simulationDownloadColumn.setText("Download Results");
 		simulationDownloadColumn.setWidth(200);
+		simulationDownloadColumn.setAlignment(SWT.CENTER);
 		
 		
 		
@@ -151,7 +152,16 @@ public class KubernetesView extends ViewPart {
 
 	}
 
-	private void refreshExperimentsTable(List<SimulationVO> simulations) {
+	private void refreshExperimentsTable() {
+		String kubernetesClientHost = hostTextField.getText();
+		List<SimulationVO> simulations;
+		try {
+			simulations = experimentHandler.getExistingSimulation(kubernetesClientHost);
+		} catch (ClientNotAvailableException | ExperimentException e) {
+			// TODO Auto-generated catch block
+			showMessage(e.getMessage());
+			return;
+		}
 		Table table = this.simulationsTable;
 
 
@@ -183,8 +193,7 @@ public class KubernetesView extends ViewPart {
 			editor.setEditor(simulationTimestampText, row, 2);
 			
 			editor = new TableEditor(table);
-			Button downloadLogButton = new Button(table, SWT.PUSH);
-			downloadLogButton.setText("Download Log");
+			Button downloadLogButton = makeDownloadButton(table, simulation);
 			editor.grabHorizontal = true;
 			editor.setEditor(downloadLogButton, row, 3);
 			
@@ -199,11 +208,36 @@ public class KubernetesView extends ViewPart {
 		}
 
 		
-	//table.setSize(table.computeSize(SWT.DEFAULT, 400));
-//		for (int i = 0; i < table.getColumnCount(); i++) {
-//			table.getColumn(i).pack();
-//		}
 
+	}
+	
+	private Button makeDownloadButton(Table table, SimulationVO simulation) {
+		Button downloadLogButton = new Button(table, SWT.PUSH);
+		downloadLogButton.setText("Download Log");
+		downloadLogButton.addSelectionListener(new SelectionAdapter() {
+			
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
+				filesSave.setFilterNames(new String[] {"TXT"});
+				filesSave.setFilterExtensions(new String[] {".txt"});
+				filesSave.setFileName(simulation.getSimulationName()+ "_log.txt");
+				
+				String fileName = filesSave.open();
+				if(fileName != null) {
+					File file = new File(fileName);
+					try {
+						file.createNewFile();
+					} catch (IOException e1) {
+						showMessage("Could not create File!");
+					}
+				}else {
+					showMessage("Please specify a proper file location.");
+				}
+				
+			}
+		});
+		return downloadLogButton;
 	}
 
 	private void makeRefreshExperimentsButton() {
@@ -224,14 +258,7 @@ public class KubernetesView extends ViewPart {
 
 				switch (event.type) {
 				case SWT.Selection:
-					String kubernetesClientHost = hostTextField.getText();
-
-					try {
-						refreshExperimentsTable(experimentHandler.getExistingSimulation(kubernetesClientHost));
-
-					} catch (ExperimentException | ClientNotAvailableException e) {
-						showMessage(e.getMessage());
-					}
+					refreshExperimentsTable();
 					break;
 				}
 
@@ -263,7 +290,9 @@ public class KubernetesView extends ViewPart {
 					String kubernetesClientHost = hostTextField.getText();
 
 					try {
-						experimentHandler.sendExperimentData(pathToExperimentFile, kubernetesClientHost);
+						SimulationVO simulation = experimentHandler.sendExperimentData(pathToExperimentFile, kubernetesClientHost);
+						refreshExperimentsTable();
+						showMessage("Successfully started simulation with name: " + simulation.getSimulationName());
 					} catch (ExperimentException | ClientNotAvailableException e) {
 						showMessage(e.getMessage());
 					}
@@ -335,44 +364,21 @@ public class KubernetesView extends ViewPart {
 	}
 
 	private void fillLocalPullDown(IMenuManager manager) {
-		manager.add(action1);
-		manager.add(new Separator());
-		manager.add(action2);
+		//TODO pulldown menu needed?
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
-		manager.add(action1);
-		manager.add(action2);
+		//TODO add actions here like manager.add(action);
 		// Other plug-ins can contribute there actions here
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
 	}
 
 	private void fillLocalToolBar(IToolBarManager manager) {
-		manager.add(action1);
-		manager.add(action2);
-		manager.add(action2);
+		//TODO toolbar needed?
 	}
 
 	private void makeActions() {
-		action1 = new Action() {
-			public void run() {
-				showMessage("Action 1 executed");
-			}
-		};
-		action1.setText("Action 1");
-		action1.setToolTipText("Action 1 tooltip");
-		action1.setImageDescriptor(
-				PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
-
-		action2 = new Action() {
-			public void run() {
-				new ShowDirectoryDialog(workbench.getDisplay()).run();
-			}
-		};
-		action2.setText("Action 2");
-		action2.setToolTipText("Action 2 tooltip");
-		action2.setImageDescriptor(workbench.getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
-
+		//TODO actions for toolbar needed?
 	}
 
 	/*

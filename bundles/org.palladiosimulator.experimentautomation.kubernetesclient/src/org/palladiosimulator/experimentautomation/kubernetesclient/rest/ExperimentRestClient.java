@@ -28,7 +28,7 @@ import com.google.gson.reflect.TypeToken;
 
 public class ExperimentRestClient {
 
-	public boolean startSimulation(byte[] content, String clientHost) throws ClientNotAvailableException, ExperimentException {
+	public SimulationVO startSimulation(byte[] content, String clientHost) throws ClientNotAvailableException, ExperimentException {
 		
 		checkIfClientisAvailable(clientHost);
 		HttpResponse httpResponse;
@@ -41,8 +41,15 @@ public class ExperimentRestClient {
 			//TODO logging
 			throw new ExperimentException(e.getMessage());
 		}
-
-		return true;
+		
+		String simulationVOJsonString;
+		try {
+			simulationVOJsonString = EntityUtils.toString(httpResponse.getEntity());
+		} catch (ParseException | IOException e) {
+			throw new ExperimentException(e.getMessage());
+		}
+		SimulationVO simulation = JSONUtil.getInstance().fromJson(simulationVOJsonString, SimulationVO.class);
+		return simulation;
 	}
 
 	public List<SimulationVO> getAvailableSimulations(String clientHost) throws ClientNotAvailableException, ExperimentException {
