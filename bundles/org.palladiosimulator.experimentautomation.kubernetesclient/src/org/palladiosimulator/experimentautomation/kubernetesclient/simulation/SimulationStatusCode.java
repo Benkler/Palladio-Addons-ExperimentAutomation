@@ -1,5 +1,10 @@
 package org.palladiosimulator.experimentautomation.kubernetesclient.simulation;
 
+/**
+ * Possible Status for a Simulation
+ * @author Niko Benkler
+ *
+ */
 public enum SimulationStatusCode {
 
   CREATED("CREATED"), RUNNING("RUNNING"), SUCCEEDED("SUCCEEDED"), FAILED("FAILED");

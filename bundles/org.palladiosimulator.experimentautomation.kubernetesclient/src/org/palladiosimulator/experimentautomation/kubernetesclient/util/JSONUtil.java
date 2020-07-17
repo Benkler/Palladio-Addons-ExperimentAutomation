@@ -3,6 +3,11 @@ package org.palladiosimulator.experimentautomation.kubernetesclient.util;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+/**
+ * Utility class for JSON conversion.
+ * @author Niko Benkler
+ *
+ */
 public class JSONUtil {
 
   private Gson gson;
@@ -28,9 +33,9 @@ public class JSONUtil {
   public <T> T fromJson(String json, Class<T> clazz) {
     return gson.fromJson(json, clazz);
   }
-  
+
   public <T> T fromJson(String json, TypeToken<T> token) {
-	    return gson.fromJson(json, token.getType());
-	  }
+    return gson.fromJson(json, token.getType());
+  }
 
 }

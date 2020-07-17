@@ -12,6 +12,11 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 
+/**
+ * Utility class for zipping and de-zipping files
+ * @author Niko Benkler
+ *
+ */
 public class ZipUtil {
 
 
