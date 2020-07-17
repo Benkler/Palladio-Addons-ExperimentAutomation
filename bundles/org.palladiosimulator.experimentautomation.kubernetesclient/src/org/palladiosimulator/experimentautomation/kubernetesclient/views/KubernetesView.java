@@ -1,12 +1,6 @@
 package org.palladiosimulator.experimentautomation.kubernetesclient.views;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.zip.ZipOutputStream;
 
 import javax.inject.Inject;
 
@@ -19,7 +13,6 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
@@ -32,9 +25,6 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableColumn;
-import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.ISharedImages;
@@ -45,7 +35,6 @@ import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperime
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ClientNotAvailableException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
 import org.palladiosimulator.experimentautomation.kubernetesclient.experimentloader.ExperimentHandler;
-import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationStatusCode;
 import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
 
 public class KubernetesView extends ViewPart {
@@ -60,7 +49,7 @@ public class KubernetesView extends ViewPart {
 
 	private Text hostTextField;
 	private Text pathToExperimentFileTextField;
-	private Table simulationsTable;
+	private SortTable simulationsTable;
 	private Composite parent;
 	private IExperimentHandler experimentHandler;
 
@@ -104,38 +93,10 @@ public class KubernetesView extends ViewPart {
 
 	private void makeExperimentsTable() {
 
+		SortTable table = new SortTable(parent, this);
 		GridData data = new GridData(GridData.FILL_VERTICAL);
 		data.horizontalSpan = 4;
-		Table table = new Table(parent, SWT.BORDER | SWT.MULTI | SWT.FULL_SELECTION);
 		table.setLayoutData(data);
-		table.setLinesVisible(true);
-		table.setHeaderVisible(true);
-
-		TableColumn simulationNamecolumn = new TableColumn(table, SWT.None);
-		simulationNamecolumn.setText("Simulation Name");
-		simulationNamecolumn.setWidth(350);
-		simulationNamecolumn.setAlignment(SWT.CENTER);
-
-		TableColumn simulationStatusColumn = new TableColumn(table, SWT.None);
-		simulationStatusColumn.setText("Simulation Status");
-		simulationStatusColumn.setWidth(150);
-		simulationStatusColumn.setAlignment(SWT.CENTER);
-
-		TableColumn simulationCreationTimeColumn = new TableColumn(table, SWT.None);
-		simulationCreationTimeColumn.setText("Creation Time");
-		simulationCreationTimeColumn.setWidth(180);
-		simulationCreationTimeColumn.setAlignment(SWT.CENTER);
-
-		TableColumn simulationLogsColumn = new TableColumn(table, SWT.None);
-		simulationLogsColumn.setText("Get Logs");
-		simulationLogsColumn.setWidth(160);
-		simulationLogsColumn.setAlignment(SWT.CENTER);
-
-		TableColumn simulationDownloadColumn = new TableColumn(table, SWT.None);
-		simulationDownloadColumn.setText("Download Results");
-		simulationDownloadColumn.setWidth(200);
-		simulationDownloadColumn.setAlignment(SWT.CENTER);
-
 		this.simulationsTable = table;
 
 	}
@@ -145,145 +106,13 @@ public class KubernetesView extends ViewPart {
 		List<SimulationVO> simulations;
 		try {
 			simulations = experimentHandler.getExistingSimulation(kubernetesClientHost);
+			simulationsTable.updateTable(simulations, kubernetesClientHost, experimentHandler);
 		} catch (ClientNotAvailableException | ExperimentException e) {
 			// TODO Auto-generated catch block
 			showMessage(e.getMessage());
 			return;
 		}
-		Table table = this.simulationsTable;
 
-		// Clear all rows
-		table.removeAll();
-
-		for (SimulationVO simulation : simulations) {
-			TableItem row = new TableItem(table, SWT.NONE);
-
-			TableEditor editor = new TableEditor(table);
-			editor = new TableEditor(table);
-			Text simulationNameText = new Text(table, SWT.NONE);
-			simulationNameText.setText(simulation.getSimulationName());
-			editor.grabHorizontal = true;
-			editor.setEditor(simulationNameText, row, 0);
-
-			editor = new TableEditor(table);
-			Text simulationStatusText = new Text(table, SWT.NONE);
-			simulationStatusText.setText(simulation.getSimulationStatus().getStatus());
-			editor.grabHorizontal = true;
-			editor.setEditor(simulationStatusText, row, 1);
-
-			editor = new TableEditor(table);
-			Text simulationTimestampText = new Text(table, SWT.NONE);
-			simulationTimestampText.setText(simulation.getCreationTimeStamp());
-			editor.grabHorizontal = true;
-			editor.setEditor(simulationTimestampText, row, 2);
-
-			editor = new TableEditor(table);
-			Button downloadLogButton = makeDownloadLogButton(table, simulation, kubernetesClientHost);
-			editor.grabHorizontal = true;
-			editor.setEditor(downloadLogButton, row, 3);
-
-			if (simulation.getSimulationStatus() == SimulationStatusCode.SUCCEEDED) {
-				editor = new TableEditor(table);
-				Button downloadResultButton = makeDownloadResultFilesButton(table, simulation, kubernetesClientHost);
-				editor.grabHorizontal = true;
-				editor.setEditor(downloadResultButton, row, 4);
-			} else {
-				editor = new TableEditor(table);
-				editor.grabHorizontal = true;
-				//Make empty label
-				editor.setEditor(new Label(table, SWT.NULL), row, 4);
-			}
-
-		}
-
-	}
-
-	private Button makeDownloadResultFilesButton(Table table, SimulationVO simulation, String clientHost) {
-
-		Button resultButton = new Button(table, SWT.PUSH);
-		resultButton.setText("Download Results");
-		
-		resultButton.addSelectionListener(new SelectionAdapter() {
-
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-
-				byte[] zippedExperimentResults;
-				try {
-					zippedExperimentResults = experimentHandler.getZippedSimulationResultsAsByteArray(simulation.getSimulationName(), clientHost);
-				} catch (ClientNotAvailableException | ExperimentException e1) {
-					showMessage(e1.getMessage());
-					return;
-
-				}
-
-				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
-				filesSave.setFilterNames(new String[] { "ZIP","All Files (*.*)" });
-				filesSave.setFilterExtensions(new String[] { "*.zip" , "*.*"});
-				filesSave.setFileName(simulation.getSimulationName() + "_results.zip");
-
-				String fileName = filesSave.open();
-				if (fileName != null) {
-					Path path = Paths.get(fileName);
-					try {
-						
-						//ZipOutputStream zos = new 
-						Files.write(path, zippedExperimentResults);
-					} catch (IOException e2) {
-						// TODO Auto-generated catch block
-						showMessage("Could not create File!");
-					}
-
-				} else {
-					showMessage("Please specify a proper file location.");
-				}
-
-			}
-		});
-		
-		return resultButton;
-	}
-
-	private Button makeDownloadLogButton(Table table, SimulationVO simulation, String clientHost) {
-
-		Button downloadLogButton = new Button(table, SWT.PUSH);
-		downloadLogButton.setText("Download Log");
-		downloadLogButton.addSelectionListener(new SelectionAdapter() {
-
-			@Override
-			public void widgetSelected(SelectionEvent e) {
-
-				String log;
-				try {
-					log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientHost);
-				} catch (ClientNotAvailableException | ExperimentException e1) {
-					showMessage(e1.getMessage());
-					return;
-
-				}
-
-				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
-				filesSave.setFilterNames(new String[] { "TXT" ,"All Files (*.*)"});
-				filesSave.setFilterExtensions(new String[] { "*.txt" , "*.*"});
-				filesSave.setFileName(simulation.getSimulationName() + "_log.txt");
-
-				String fileName = filesSave.open();
-				if (fileName != null) {
-					Path path = Paths.get(fileName);
-					try {
-						Files.write(path, log.getBytes());
-					} catch (IOException e2) {
-						// TODO Auto-generated catch block
-						showMessage("Could not create File!");
-					}
-
-				} else {
-					showMessage("Please specify a proper file location.");
-				}
-
-			}
-		});
-		return downloadLogButton;
 	}
 
 	private void makeRefreshExperimentsButton() {
@@ -433,6 +262,10 @@ public class KubernetesView extends ViewPart {
 	 */
 	private void showMessage(String message) {
 		MessageDialog.openInformation(parent.getShell(), "Kubernetes View", message);
+	}
+
+	public void sendMessage(String message) {
+		showMessage(message);
 	}
 
 	@Override
