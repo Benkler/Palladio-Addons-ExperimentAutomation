@@ -32,6 +32,9 @@ import org.eclipse.swt.events.SelectionEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -193,7 +196,7 @@ public class KubernetesView extends ViewPart {
 			editor.setEditor(simulationTimestampText, row, 2);
 			
 			editor = new TableEditor(table);
-			Button downloadLogButton = makeDownloadButton(table, simulation);
+			Button downloadLogButton = makeDownloadLogButton(table, simulation, kubernetesClientHost);
 			editor.grabHorizontal = true;
 			editor.setEditor(downloadLogButton, row, 3);
 			
@@ -211,13 +214,25 @@ public class KubernetesView extends ViewPart {
 
 	}
 	
-	private Button makeDownloadButton(Table table, SimulationVO simulation) {
+	private Button makeDownloadLogButton(Table table, SimulationVO simulation, String clientHost) {
+	
 		Button downloadLogButton = new Button(table, SWT.PUSH);
 		downloadLogButton.setText("Download Log");
 		downloadLogButton.addSelectionListener(new SelectionAdapter() {
 			
 			@Override
 			public void widgetSelected(SelectionEvent e) {
+				
+				String log;
+				try {
+					 log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientHost);
+				} catch (ClientNotAvailableException | ExperimentException e1) {
+					showMessage(e1.getMessage());
+					return;
+					
+				}
+				
+				
 				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
 				filesSave.setFilterNames(new String[] {"TXT"});
 				filesSave.setFilterExtensions(new String[] {".txt"});
@@ -225,12 +240,14 @@ public class KubernetesView extends ViewPart {
 				
 				String fileName = filesSave.open();
 				if(fileName != null) {
-					File file = new File(fileName);
+					Path path = Paths.get(fileName);
 					try {
-						file.createNewFile();
-					} catch (IOException e1) {
+						Files.write(path, log.getBytes());
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
 						showMessage("Could not create File!");
 					}
+					
 				}else {
 					showMessage("Please specify a proper file location.");
 				}

@@ -74,7 +74,7 @@ public class KubernetesClientPathFactory {
 		return builder.build();
 	}
 	
-	public URI getGetAllSimulationsUri(String clientHost) throws URISyntaxException {
+	public URI getGetAllSimulationsURI(String clientHost) throws URISyntaxException {
 		URI baseURI = getClientURI(clientHost);
 		URIBuilder builder = new URIBuilder(baseURI);
 		builder.setPath(KubernetesClientProperties.CLIENT_GET_ALL_SIMULATIONS_PATH);
@@ -85,6 +85,14 @@ public class KubernetesClientPathFactory {
 		URI baseURI = getClientURI(clientHost);
 		URIBuilder builder = new URIBuilder(baseURI);
 		builder.setPath(KubernetesClientProperties.CLIENT_IS_AVAILABLE_PATH);
+		return builder.build();
+	}
+
+	public URI getSimulationLogURI(String simulationName, String clientHost) throws URISyntaxException {
+		URI baseURI = getClientURI(clientHost);
+		URIBuilder builder = new URIBuilder(baseURI);
+		String simulationLogPath = KubernetesClientProperties.CLIENT_SIMULATION_LOG_PATH.replace("{}", simulationName);
+		builder.setPath(simulationLogPath);
 		return builder.build();
 	}
 

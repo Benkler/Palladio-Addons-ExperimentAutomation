@@ -3,14 +3,12 @@ package org.palladiosimulator.experimentautomation.kubernetesclient.rest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.ParseException;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -23,10 +21,32 @@ import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.Ku
 import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
 import org.palladiosimulator.experimentautomation.kubernetesclient.util.JSONUtil;
 
-import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 public class ExperimentRestClient {
+	
+	public String getSimulationLogFromSimulation(String simulationName, String clientHost) throws ClientNotAvailableException, ExperimentException {
+		
+		checkIfClientisAvailable(clientHost);
+		HttpResponse httpResponse;
+		
+		try {
+			URI getLogURI = KubernetesClientPathFactory.getInstance().getSimulationLogURI(simulationName, clientHost);
+			httpResponse = Request.Get(getLogURI).execute().returnResponse();
+		} catch (URISyntaxException | IOException e) {
+			//TODO logging
+			throw new ExperimentException(e.getMessage());
+		}
+		
+		
+		try {
+			return  EntityUtils.toString(httpResponse.getEntity());
+		} catch (ParseException | IOException e) {
+			//TODO logging
+			throw new ExperimentException(e.getMessage());
+		}
+		
+	}
 
 	public SimulationVO startSimulation(byte[] content, String clientHost) throws ClientNotAvailableException, ExperimentException {
 		
@@ -57,7 +77,7 @@ public class ExperimentRestClient {
 		checkIfClientisAvailable(clientHost);
 		HttpResponse httpResponse;
 		try {
-			URI getAllSimulationsURI = KubernetesClientPathFactory.getInstance().getGetAllSimulationsUri(clientHost);
+			URI getAllSimulationsURI = KubernetesClientPathFactory.getInstance().getGetAllSimulationsURI(clientHost);
 			 httpResponse = Request.Get(getAllSimulationsURI).execute().returnResponse();
 			
 		} catch (URISyntaxException | IOException e) {

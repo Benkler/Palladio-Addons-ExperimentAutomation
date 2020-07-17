@@ -28,6 +28,17 @@ public interface IExperimentHandler {
 	 */
 	List<SimulationVO> getExistingSimulation(String clientHost) throws ClientNotAvailableException, ExperimentException;
 
+	/**
+	 * Retrieve log file as String from given simulation
+	 * @param simulationName
+	 * @param clientHost
+	 * @return
+	 * @throws ClientNotAvailableException
+	 * @throws ExperimentException
+	 */
+	String getSimulationLog(String simulationName, String clientHost)
+			throws ClientNotAvailableException, ExperimentException;
+
 	
 	
 }

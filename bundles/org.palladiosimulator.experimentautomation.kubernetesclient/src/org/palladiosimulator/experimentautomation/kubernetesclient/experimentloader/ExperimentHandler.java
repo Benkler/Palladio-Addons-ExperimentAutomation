@@ -63,6 +63,19 @@ public class ExperimentHandler implements IExperimentHandler {
 	}
 	
 	/**
+	 * Retrieve log file as String from given simulation
+	 * @param simulationName
+	 * @param clientHost
+	 * @return
+	 * @throws ClientNotAvailableException
+	 * @throws ExperimentException
+	 */
+	@Override
+	public String getSimulationLog(String simulationName, String clientHost) throws ClientNotAvailableException, ExperimentException {
+		return restClient.getSimulationLogFromSimulation(simulationName, clientHost);
+	}
+	
+	/**
 	 * Process query to send experiment data to client
 	 * 
 	 * @param pathToExperimentFile
