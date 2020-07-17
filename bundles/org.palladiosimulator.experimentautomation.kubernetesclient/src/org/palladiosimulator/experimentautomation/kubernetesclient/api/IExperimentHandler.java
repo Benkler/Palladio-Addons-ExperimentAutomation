@@ -39,6 +39,17 @@ public interface IExperimentHandler {
 	String getSimulationLog(String simulationName, String clientHost)
 			throws ClientNotAvailableException, ExperimentException;
 
+	/**
+	 * Get simulation results as byte array. Results are zipped, so they must be further processed.
+	 * @param simulationName
+	 * @param clientHost
+	 * @return
+	 * @throws ClientNotAvailableException
+	 * @throws ExperimentException
+	 */
+	byte[] getZippedSimulationResultsAsByteArray(String simulationName, String clientHost)
+			throws ClientNotAvailableException, ExperimentException;
+
 	
 	
 }

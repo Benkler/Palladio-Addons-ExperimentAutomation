@@ -49,6 +49,19 @@ public class ExperimentHandler implements IExperimentHandler {
 	private final static String pathToExperimentFolder = "resources/experimentFiles/";
 	private final static String pathToZipFile = "resources/experimentData.zip";
 
+	/**
+	 * Get simulation results as byte array. Results are zipped, so they must be further processed.
+	 * @param simulationName
+	 * @param clientHost
+	 * @return
+	 * @throws ClientNotAvailableException
+	 * @throws ExperimentException
+	 */
+	@Override
+	public byte[] getZippedSimulationResultsAsByteArray(String simulationName, String clientHost) throws ClientNotAvailableException, ExperimentException {
+		
+		return restClient.getSimulationResultsFromSimulation(simulationName, clientHost);
+	}
 	
 	/**
 	 * Retrieve all existing Simulations

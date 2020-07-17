@@ -1,58 +1,52 @@
 package org.palladiosimulator.experimentautomation.kubernetesclient.views;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.zip.ZipOutputStream;
+
+import javax.inject.Inject;
+
+import org.eclipse.jface.action.IMenuListener;
+import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.action.Separator;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.TableEditor;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.part.*;
-import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
-import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ClientNotAvailableException;
-import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
-import org.palladiosimulator.experimentautomation.kubernetesclient.experimentloader.ExperimentHandler;
-import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
-import org.eclipse.jface.viewers.*;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.jface.action.*;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.ui.*;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.CCombo;
-import org.eclipse.swt.custom.TableEditor;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-
-import javax.inject.Inject;
-
-/**
- * This sample class demonstrates how to plug-in a new workbench view. The view
- * shows data obtained from the model. The sample creates a dummy model on the
- * fly, but a real implementation would connect to the model available either in
- * this or another plug-in (e.g. the workspace). The view is connected to the
- * model using a content provider.
- * <p>
- * The view uses a label provider to define how model objects should be
- * presented in the view. Each view can present the same model objects using
- * different labels and icons, if needed. Alternatively, a single label provider
- * can be shared between views in order to ensure that objects of the same type
- * are presented in the same way everywhere.
- * <p>
- */
+import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.ISharedImages;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchActionConstants;
+import org.eclipse.ui.part.ViewPart;
+import org.palladiosimulator.experimentautomation.kubernetesclient.api.IExperimentHandler;
+import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ClientNotAvailableException;
+import org.palladiosimulator.experimentautomation.kubernetesclient.exception.ExperimentException;
+import org.palladiosimulator.experimentautomation.kubernetesclient.experimentloader.ExperimentHandler;
+import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationStatusCode;
+import org.palladiosimulator.experimentautomation.kubernetesclient.simulation.SimulationVO;
 
 public class KubernetesView extends ViewPart {
 
@@ -112,44 +106,35 @@ public class KubernetesView extends ViewPart {
 
 		GridData data = new GridData(GridData.FILL_VERTICAL);
 		data.horizontalSpan = 4;
-		Table table = new Table(parent, SWT.BORDER | SWT.MULTI
-		        | SWT.FULL_SELECTION);
+		Table table = new Table(parent, SWT.BORDER | SWT.MULTI | SWT.FULL_SELECTION);
 		table.setLayoutData(data);
 		table.setLinesVisible(true);
 		table.setHeaderVisible(true);
-		
+
 		TableColumn simulationNamecolumn = new TableColumn(table, SWT.None);
 		simulationNamecolumn.setText("Simulation Name");
 		simulationNamecolumn.setWidth(350);
 		simulationNamecolumn.setAlignment(SWT.CENTER);
-		
+
 		TableColumn simulationStatusColumn = new TableColumn(table, SWT.None);
 		simulationStatusColumn.setText("Simulation Status");
 		simulationStatusColumn.setWidth(150);
 		simulationStatusColumn.setAlignment(SWT.CENTER);
-		
+
 		TableColumn simulationCreationTimeColumn = new TableColumn(table, SWT.None);
 		simulationCreationTimeColumn.setText("Creation Time");
 		simulationCreationTimeColumn.setWidth(180);
 		simulationCreationTimeColumn.setAlignment(SWT.CENTER);
-		
+
 		TableColumn simulationLogsColumn = new TableColumn(table, SWT.None);
 		simulationLogsColumn.setText("Get Logs");
 		simulationLogsColumn.setWidth(160);
 		simulationLogsColumn.setAlignment(SWT.CENTER);
-		
+
 		TableColumn simulationDownloadColumn = new TableColumn(table, SWT.None);
 		simulationDownloadColumn.setText("Download Results");
 		simulationDownloadColumn.setWidth(200);
 		simulationDownloadColumn.setAlignment(SWT.CENTER);
-		
-		
-		
-//
-//		for (int i = 0; i < titles.length; i++) {
-//			table.getColumn(i).pack();
-//		}
-		// table.setSize(table.computeSize(SWT.DEFAULT, 200));
 
 		this.simulationsTable = table;
 
@@ -167,15 +152,12 @@ public class KubernetesView extends ViewPart {
 		}
 		Table table = this.simulationsTable;
 
-
 		// Clear all rows
 		table.removeAll();
 
-		
 		for (SimulationVO simulation : simulations) {
 			TableItem row = new TableItem(table, SWT.NONE);
-			
-			
+
 			TableEditor editor = new TableEditor(table);
 			editor = new TableEditor(table);
 			Text simulationNameText = new Text(table, SWT.NONE);
@@ -194,52 +176,99 @@ public class KubernetesView extends ViewPart {
 			simulationTimestampText.setText(simulation.getCreationTimeStamp());
 			editor.grabHorizontal = true;
 			editor.setEditor(simulationTimestampText, row, 2);
-			
+
 			editor = new TableEditor(table);
 			Button downloadLogButton = makeDownloadLogButton(table, simulation, kubernetesClientHost);
 			editor.grabHorizontal = true;
 			editor.setEditor(downloadLogButton, row, 3);
-			
-			editor = new TableEditor(table);
-			Button statusButton = new Button(table, SWT.PUSH);
-			statusButton.setText("Status");
-			editor.grabHorizontal = true;
-			editor.setEditor(statusButton, row, 4);
 
-
+			if (simulation.getSimulationStatus() == SimulationStatusCode.SUCCEEDED) {
+				editor = new TableEditor(table);
+				Button downloadResultButton = makeDownloadResultFilesButton(table, simulation, kubernetesClientHost);
+				editor.grabHorizontal = true;
+				editor.setEditor(downloadResultButton, row, 4);
+			} else {
+				editor = new TableEditor(table);
+				editor.grabHorizontal = true;
+				//Make empty label
+				editor.setEditor(new Label(table, SWT.NULL), row, 4);
+			}
 
 		}
 
-		
-
 	}
-	
-	private Button makeDownloadLogButton(Table table, SimulationVO simulation, String clientHost) {
-	
-		Button downloadLogButton = new Button(table, SWT.PUSH);
-		downloadLogButton.setText("Download Log");
-		downloadLogButton.addSelectionListener(new SelectionAdapter() {
-			
+
+	private Button makeDownloadResultFilesButton(Table table, SimulationVO simulation, String clientHost) {
+
+		Button resultButton = new Button(table, SWT.PUSH);
+		resultButton.setText("Download Results");
+		
+		resultButton.addSelectionListener(new SelectionAdapter() {
+
 			@Override
 			public void widgetSelected(SelectionEvent e) {
-				
-				String log;
+
+				byte[] zippedExperimentResults;
 				try {
-					 log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientHost);
+					zippedExperimentResults = experimentHandler.getZippedSimulationResultsAsByteArray(simulation.getSimulationName(), clientHost);
 				} catch (ClientNotAvailableException | ExperimentException e1) {
 					showMessage(e1.getMessage());
 					return;
-					
+
 				}
-				
-				
+
 				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
-				filesSave.setFilterNames(new String[] {"TXT"});
-				filesSave.setFilterExtensions(new String[] {".txt"});
-				filesSave.setFileName(simulation.getSimulationName()+ "_log.txt");
-				
+				filesSave.setFilterNames(new String[] { "ZIP","All Files (*.*)" });
+				filesSave.setFilterExtensions(new String[] { "*.zip" , "*.*"});
+				filesSave.setFileName(simulation.getSimulationName() + "_results.zip");
+
 				String fileName = filesSave.open();
-				if(fileName != null) {
+				if (fileName != null) {
+					Path path = Paths.get(fileName);
+					try {
+						
+						//ZipOutputStream zos = new 
+						Files.write(path, zippedExperimentResults);
+					} catch (IOException e2) {
+						// TODO Auto-generated catch block
+						showMessage("Could not create File!");
+					}
+
+				} else {
+					showMessage("Please specify a proper file location.");
+				}
+
+			}
+		});
+		
+		return resultButton;
+	}
+
+	private Button makeDownloadLogButton(Table table, SimulationVO simulation, String clientHost) {
+
+		Button downloadLogButton = new Button(table, SWT.PUSH);
+		downloadLogButton.setText("Download Log");
+		downloadLogButton.addSelectionListener(new SelectionAdapter() {
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+
+				String log;
+				try {
+					log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientHost);
+				} catch (ClientNotAvailableException | ExperimentException e1) {
+					showMessage(e1.getMessage());
+					return;
+
+				}
+
+				FileDialog filesSave = new FileDialog(parent.getShell(), SWT.SAVE);
+				filesSave.setFilterNames(new String[] { "TXT" ,"All Files (*.*)"});
+				filesSave.setFilterExtensions(new String[] { "*.txt" , "*.*"});
+				filesSave.setFileName(simulation.getSimulationName() + "_log.txt");
+
+				String fileName = filesSave.open();
+				if (fileName != null) {
 					Path path = Paths.get(fileName);
 					try {
 						Files.write(path, log.getBytes());
@@ -247,11 +276,11 @@ public class KubernetesView extends ViewPart {
 						// TODO Auto-generated catch block
 						showMessage("Could not create File!");
 					}
-					
-				}else {
+
+				} else {
 					showMessage("Please specify a proper file location.");
 				}
-				
+
 			}
 		});
 		return downloadLogButton;
@@ -307,7 +336,8 @@ public class KubernetesView extends ViewPart {
 					String kubernetesClientHost = hostTextField.getText();
 
 					try {
-						SimulationVO simulation = experimentHandler.sendExperimentData(pathToExperimentFile, kubernetesClientHost);
+						SimulationVO simulation = experimentHandler.sendExperimentData(pathToExperimentFile,
+								kubernetesClientHost);
 						refreshExperimentsTable();
 						showMessage("Successfully started simulation with name: " + simulation.getSimulationName());
 					} catch (ExperimentException | ClientNotAvailableException e) {
@@ -381,21 +411,21 @@ public class KubernetesView extends ViewPart {
 	}
 
 	private void fillLocalPullDown(IMenuManager manager) {
-		//TODO pulldown menu needed?
+		// TODO pulldown menu needed?
 	}
 
 	private void fillContextMenu(IMenuManager manager) {
-		//TODO add actions here like manager.add(action);
+		// TODO add actions here like manager.add(action);
 		// Other plug-ins can contribute there actions here
 		manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
 	}
 
 	private void fillLocalToolBar(IToolBarManager manager) {
-		//TODO toolbar needed?
+		// TODO toolbar needed?
 	}
 
 	private void makeActions() {
-		//TODO actions for toolbar needed?
+		// TODO actions for toolbar needed?
 	}
 
 	/*
