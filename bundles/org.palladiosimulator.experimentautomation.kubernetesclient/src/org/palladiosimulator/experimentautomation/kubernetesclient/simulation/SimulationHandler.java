@@ -116,8 +116,8 @@ public class SimulationHandler implements ISimulationHandler {
   }
 
   /*
-  * Create zip file from ressource
-  */
+   * Create zip file from ressource
+   */
   private byte[] zipResourcesAsByteStream() throws ExperimentException {
     ZipUtil zipUtil = new ZipUtil();
     if (zipUtil.createZipFileRecursively(pathToResourceFolder, pathToZipFile) == null) {
@@ -196,13 +196,7 @@ public class SimulationHandler implements ISimulationHandler {
   private ResourceSet resolveResourcesFromExperimentFile(URI uriToExperimentFile)
       throws ExperimentException {
 
-    Resource.Factory.Registry reg = Resource.Factory.Registry.INSTANCE;
-    Map<String, Object> m = reg.getExtensionToFactoryMap();
-    // TODO hier war XMIResourceFactoryImpl
-    m.put("experiments", new XMLResourceFactoryImpl());
-
     ResourceSet resSet = new ResourceSetImpl();
-
 
     try {
       resSet.getResource(uriToExperimentFile, true);
@@ -210,20 +204,7 @@ public class SimulationHandler implements ISimulationHandler {
       System.out.println(e.getMessage());
       throw new ExperimentException("Could not find resource with URI: " + uriToExperimentFile);
     }
-
-    // Resource root resource (experiment file)
-   // EcoreUtil.resolveAll(resSet);
-
-    // TODO is this the correct approach?
-    // Resolve all resources until no more resources will be added to set
-    int amountOfResourcesInResourceSetBeforeVisiting;
-    int amountOfResourcesInResourceSetAfterVisiting;
-    do {
-      amountOfResourcesInResourceSetBeforeVisiting = resSet.getResources().size();
-      EcoreUtil.resolveAll(resSet);
-      amountOfResourcesInResourceSetAfterVisiting = resSet.getResources().size();
-
-    } while (amountOfResourcesInResourceSetAfterVisiting > amountOfResourcesInResourceSetBeforeVisiting);
+    EcoreUtil.resolveAll(resSet);
 
     return resSet;
   }

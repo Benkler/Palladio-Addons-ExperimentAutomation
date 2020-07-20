@@ -142,7 +142,7 @@ public class KubernetesView extends ViewPart implements IKubernetesView {
             try {
               SimulationVO simulation =
                   experimentHandler.sendExperimentData(pathToExperimentFile, getClientURI());
-              refreshExperimentsTable();
+              addSimulationToExperimentTable(simulation);
               showMessage(
                   "Successfully started simulation with name: " + simulation.getSimulationName());
             } catch (ExperimentException | ClientNotAvailableException
@@ -154,9 +154,16 @@ public class KubernetesView extends ViewPart implements IKubernetesView {
 
       }
 
+      
 
     });
   }
+  
+  private void addSimulationToExperimentTable(SimulationVO simulation) throws ExperimentException {
+    simulationsTable.addSimulation(simulation);
+    
+  }
+
 
   /*
    * Creates Label and Button to refresh simulation table
@@ -238,7 +245,6 @@ public class KubernetesView extends ViewPart implements IKubernetesView {
       simulations = experimentHandler.getExistingSimulation(getClientURI());
       simulationsTable.updateTable(simulations, getClientURI(), experimentHandler);
     } catch (ClientNotAvailableException | ExperimentException | InvalidClientURIException e) {
-      // TODO Auto-generated catch block
       showMessage(e.getMessage());
       return;
     }

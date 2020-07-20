@@ -12,6 +12,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.TableEditor;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -151,12 +153,27 @@ public class SimulationsTable {
     this.clientURI = clientURI;
     this.experimentHandler = experimentHandler;
 
-    rows.clear();
+
     for (SimulationVO simulation : simulations) {
-      rows.add(new TableRow(simulation));
+      Optional<TableRow> row = getRowBySimulation(simulation);
+      if (row.isEmpty()) {
+        // Add new entry if not present
+        rows.add(new TableRow(simulation));
+      } else {
+        row.get().update(simulation);
+      }
     }
     sortRowsAccordingToCurrentSortDirection();
     updateTable();
+  }
+
+  
+
+  private Optional<TableRow> getRowBySimulation(SimulationVO simulation) {
+
+    return rows.stream().filter(row -> row.simulationName.equals(simulation.getSimulationName()))
+        .findFirst();
+
   }
 
   private void updateTable() {
@@ -235,6 +252,14 @@ public class SimulationsTable {
       this.downloadResultsButton = makeDownloadResultFilesButton(simulation);
     }
 
+    
+
+    public void update(SimulationVO simulation) {
+      this.simulationStatus = simulation.getSimulationStatus().getStatus();
+      this.simulationStatusCode = simulation.getSimulationStatus();
+
+    }
+
     private Date parserSimulationCreationTimeStamp(String timeStamp) throws ExperimentException {
       try {
         return simulationCreationDate = simulationCreationTimeFormat.parse(timeStamp);
@@ -306,7 +331,7 @@ public class SimulationsTable {
 
         String log;
         try {
-          log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientURI);
+         log = experimentHandler.getSimulationLog(simulation.getSimulationName(), clientURI);
         } catch (ClientNotAvailableException | ExperimentException e1) {
           view.sendMessage(e1.getMessage());
           return;
@@ -335,6 +360,13 @@ public class SimulationsTable {
       }
     });
     return downloadLogButton;
+  }
+
+  public void addSimulation(SimulationVO simulation) throws ExperimentException {
+    TableRow row = new TableRow(simulation);
+    rows.add(row);
+    updateTable();
+
   }
 
 }
